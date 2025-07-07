@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: armstrong
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    ports:
+      - "8538:8538"
+    depends_on:
+      - db
+    environment:
+      POSTGRES_DB: armstrong
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      DB_HOST: db
+    volumes:
+      - ./uploads:/app/uploads
+      - ./static:/app/static
+      - .:/app
+    working_dir: /app
+    command: uvicorn main:app --host 0.0.0.0 --port 8538 --reload
+
+  django_admin:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      POSTGRES_DB: armstrong
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      DB_HOST: db
+      DJANGO_SETTINGS_MODULE: admin_panel.settings
+    volumes:
+      - ./uploads:/app/uploads
+      - ./static:/app/static
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -c "sleep 10 &&
+             python manage.py makemigrations admin_app &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  postgres_data:
